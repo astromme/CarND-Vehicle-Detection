@@ -8,17 +8,17 @@ from sklearn.preprocessing import StandardScaler
 from skimage.feature import hog
 from sklearn.model_selection import train_test_split
 import pickle
-from lesson_functions import get_hog_features, extract_features
+from features import extract_features
+import sys
 
 from cars_notcars import cars, notcars
 
-# Reduce the sample size because
-# The quiz evaluator times out after 13s of CPU time
-# sample_size = 50
-# cars = cars[0:sample_size]
-# notcars = notcars[0:sample_size]
+# allow the user to specify the sample size on the command line
+if len(sys.argv) == 2:
+    sample_size = int(sys.argv[1])
+    cars = cars[0:sample_size]
+    notcars = notcars[0:sample_size]
 
-### TODO: Tweak these parameters and see how the results change.
 p = {
     'color_space': 'YCrCb', # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
     'orient': 9,  # HOG orientations

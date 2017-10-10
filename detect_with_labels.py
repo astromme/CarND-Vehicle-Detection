@@ -37,12 +37,16 @@ def draw_labeled_bboxes(img, labels):
     return img
 
 
-def draw_bboxes(image, bboxes):
-    out_img = np.copy(image)
+# Define a function to draw bounding boxes
+def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
+    # Make a copy of the image
+    imcopy = np.copy(img)
+    # Iterate through the bounding boxes
     for bbox in bboxes:
-        cv2.rectangle(out_img, bbox[0], bbox[1], (0,0,255), 6)
-
-    return out_img
+        # Draw a rectangle given bbox coordinates
+        cv2.rectangle(imcopy, bbox[0], bbox[1], color, thick)
+    # Return the image copy with boxes drawn
+    return imcopy
 
 
 
@@ -53,13 +57,13 @@ def cars_from_bboxes(image, box_list):
     heat = add_heat(heat,box_list)
 
     # # Apply threshold to help remove false positives
-    # heat = apply_threshold(heat,1)
+    treshold_heat = apply_threshold(np.copy(heat), 1)
 
     # Visualize the heatmap when displaying
     heatmap = np.clip(heat, 0, 255)
 
     # Find final boxes from heatmap using label function
-    labels = label(heatmap)
+    labels = label(treshold_heat)
     draw_img = draw_labeled_bboxes(np.copy(image), labels)
 
-    return draw_img, heat
+    return draw_img, heatmap

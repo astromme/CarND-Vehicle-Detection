@@ -1,17 +1,15 @@
-import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 import cv2
-from lesson_functions import *
-from detect_with_labels import cars_from_bboxes, draw_bboxes
+from color import convert_color
+from features import get_hog_features, bin_spatial, color_hist
+from detect_with_labels import cars_from_bboxes, draw_boxes
 
 dist_pickle = pickle.load( open("svc_classifier.p", "rb" ) )
 svc = dist_pickle["svc"]
 X_scaler = dist_pickle["X_scaler"]
 p = dist_pickle["parameters"]
-
-image = mpimg.imread('test_images/test1.jpg')
 
 # Define a single function that can extract features using hog sub-sampling and make predictions
 def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell,
@@ -55,6 +53,7 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell,
                     pix_per_cell, cell_per_block, feature_vec=False)
 
     bboxes = []
+    debug_boxes = []
     for xb in range(nxsteps):
         for yb in range(nysteps):
             ypos = yb*cells_per_step
@@ -95,70 +94,55 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell,
             test_features = X_scaler.transform(np.concatenate(img_features).reshape(1, -1))
             test_prediction = svc.predict(test_features)
 
+            xbox_left = np.int(xleft*scale)
+            ytop_draw = np.int(ytop*scale)
+            win_draw = np.int(window*scale)
+            box = ((xbox_left, ytop_draw+ystart),(xbox_left+win_draw,ytop_draw+win_draw+ystart))
+            debug_boxes.append(box)
+
             if test_prediction == 1:
-                xbox_left = np.int(xleft*scale)
-                ytop_draw = np.int(ytop*scale)
-                win_draw = np.int(window*scale)
-                bboxes.append(((xbox_left, ytop_draw+ystart),(xbox_left+win_draw,ytop_draw+win_draw+ystart)))
+                bboxes.append(box)
 
-    return bboxes
+    return bboxes, debug_boxes
 
-
-from movie import process_movie
 from arrange_in_grid import arrange_in_grid
 
 def pipeline(image, write_images=False, prefix='', frame=None):
-    ystart = 400
-    ystop = 656
-
     bboxes = []
-    for scale in [1, 2]:
-        bboxes.extend(find_cars(image, ystart, ystop, scale, svc, X_scaler,
+    debug_boxes_img = image
+    for scale, ystart, ystop, color in [
+        (1.0, 350, 550, (255, 0, 0)),
+        (1.5, 350, 550, (255, 0, 0)),
+        (2, 350, 600, (0, 255, 255)),
+        (2.5, 350, 756, (0, 0, 255)),
+        (3.0, 350, 756, (100, 0, 255)),
+        (3.5, 350, 756, (200, 0, 255)),
+        (4.0, 350, 756, (255, 0, 255)),
+    ]:
+        boxes, debug_boxes = find_cars(image, ystart, ystop, scale, svc, X_scaler,
                             p['orient'], p['pix_per_cell'], p['cell_per_block'],
                             p['spatial_size'], p['hist_bins'], p['spatial_feat'],
-                            p['hist_feat'], p['hog_feat'], p['hog_channel']))
+                            p['hist_feat'], p['hog_feat'], p['hog_channel'])
+
+        bboxes.extend(boxes)
+
+        # debug_boxes_img = draw_boxes(debug_boxes_img, debug_boxes[frame%10:frame%10+1:5], color=color)
+        debug_boxes_img = draw_boxes(debug_boxes_img, debug_boxes, color=color)
 
 
     #out_img = draw_bboxes(image, bboxes)
     out_img, heat = cars_from_bboxes(image, bboxes)
 
-    maxheat = np.max(heat)
-    heat = heat / maxheat * 255
+    heat = heat * 30
 
     arranged = arrange_in_grid([
         out_img,
+        debug_boxes_img,
+        cv2.cvtColor(heat.astype(np.uint8), cv2.COLOR_GRAY2RGB),
         cv2.cvtColor(heat.astype(np.uint8), cv2.COLOR_GRAY2RGB),
         ])
 
-    return arranged
+    arranged_small = cv2.resize(arranged,out_img.shape[1::-1], interpolation = cv2.INTER_CUBIC)
 
-def main():
-    movies = {
-        'project': {
-            'input': 'project_video.mp4',
-            'output': 'project_video_output.mp4',
-            'debug_folder': 'project_video_debug',
-            'start_frame': 0,
-            'end_frame': 5,
-            'entire_clip': True,
-            'debug_frames': [1, 31, 61, 91, 121, 151, 181, 211, 241, 271, 301],
-        },
-        'test': {
-            'input': 'test_video.mp4',
-            'output': 'test_video_output.mp4',
-            'debug_folder': 'test_video_debug',
-            'start_frame': 0,
-            'end_frame': 5,
-            'entire_clip': True,
-            'debug_frames': [],
-        },
-    }
 
-    import sys
-    videos = sys.argv[1:]
-
-    for video in videos:
-        process_movie(movies[video], pipeline)
-
-if __name__ == '__main__':
-    main()
+    return arranged_small
