@@ -32,9 +32,9 @@ You're reading it!
 
 #### 1. Explain how (and identify where in your code) you extracted HOG features from the training images.
 
-Find the code in `code/features.py`. This is called from `code/train.py` during the training process and from `code/detect.py` during the detection process.
+Find the code in `features.py`. This is called from `train.py` during the training process and from `detect.py` during the detection process.
 
-`code/cars_notcars.py` loads the `cars` and `notcars` examples. They look something like this:
+`cars_notcars.py` loads the `cars` and `notcars` examples. They look something like this:
 
 ![example of car and notcar][image1]
 
@@ -51,7 +51,7 @@ All three of spatial features, histogram features and hog features helped improv
 
 #### 3. Describe how (and identify where in your code) you trained a classifier using your selected HOG features (and color features if you used them).
 
-In `code/train.py` I trained a linear SVM using scaled versions of the features described above. On my 2016 Macbook my SVC can identify 7000 labels per second. The training and test data was randomized, and the test data composed of 20% of the total dataset, a.k.a. 1800 of 9000 images each of notcars and cars.
+In `train.py` I trained a linear SVM using scaled versions of the features described above. On my 2016 Macbook my SVC can identify 7000 labels per second. The training and test data was randomized, and the test data composed of 20% of the total dataset, a.k.a. 1800 of 9000 images each of notcars and cars.
 
 ###Sliding Window Search
 
@@ -65,7 +65,7 @@ This results in a bunch of bounding boxes, which is filtered using a heatmap (se
 
 I improved speed of detection and reduced false positives by only searching a portion of the image where I knew cars would show up (a.k.a. not searching the sky).
 
-To speed up my debugging cycles I built a realtime debug feature. This played back a video to the screen using pygame functions which allowed me to step frame by frame and reload the detection code. This let me look at problematic frames and quickly test a bunch of different methods. See `code/detect_movie_live.py` for the pygame code that enables this feature. I think it's pretty cool.
+To speed up my debugging cycles I built a realtime debug feature. This played back a video to the screen using pygame functions which allowed me to step frame by frame and reload the detection code. This let me look at problematic frames and quickly test a bunch of different methods. See `detect_movie_live.py` for the pygame code that enables this feature. I think it's pretty cool.
 
 Using the live detection, I further improved my detection code by
 
@@ -83,9 +83,9 @@ Here's a [link to my video result](./project_video_output.mp4)
 
 ####2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
 
-See `code/detect_with_labels.py` for my code to do this. I recorded the positions of positive detections in each frame of the video.  From the positive detections I created a heatmap and then thresholded that map to identify vehicle positions.  I then used `scipy.ndimage.measurements.label()` to identify individual blobs in the heatmap.  I then assumed each blob corresponded to a vehicle.  I constructed bounding boxes to cover the area of each blob detected.  
+See `detect_with_labels.py` for my code to do this. I recorded the positions of positive detections in each frame of the video.  From the positive detections I created a heatmap and then thresholded that map to identify vehicle positions.  I then used `scipy.ndimage.measurements.label()` to identify individual blobs in the heatmap.  I then assumed each blob corresponded to a vehicle.  I constructed bounding boxes to cover the area of each blob detected.  
 
-You can run `code/detect_movie_live.py` to see this in action.
+You can run `detect_movie_live.py` to see this in action.
 
 ---
 
@@ -93,6 +93,10 @@ You can run `code/detect_movie_live.py` to see this in action.
 
 ####1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-I found it tricky to get the window sizes correct to detect cars in my images. At different sizes different cars were detected.
+I found it tricky to get the window sizes correct to detect cars in my images. At different sizes different cars were detected. I found a combination of window sizes by using my live video code to quickly test out different sizes.
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+I also added some of my own images of car/notcar sourced from the video. This risks overfitting but without it the cars were not always detected well.
+
+There are some limitations with my current approach. It will fail to detect cars where they don't normally appear, like the sky. It globs together cars when they get too close. It also has small gaps on the right side of the image that don't have any windows because the windows sizes aren't all factors of the total width.
+
+I could make this more robust by following a car from frame to frame and focusing the sliding window detection around a known car. I could also estimate direction and speed of the cars (at least in pixel values) to help predict where the cars will be in the next frames.

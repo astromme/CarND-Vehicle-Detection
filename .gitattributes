@@ -1,2 +1,4 @@
 project_video_output.mp4 filter=lfs diff=lfs merge=lfs -text
 test_video_output.mp4 filter=lfs diff=lfs merge=lfs -text
+project_video.mp4 filter=lfs diff=lfs merge=lfs -text
+test_video.mp4 filter=lfs diff=lfs merge=lfs -text
